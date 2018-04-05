@@ -1,5 +1,6 @@
 package com.baselet.gui.listener;
 
+import java.awt.event.InputEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.MouseWheelListener;
@@ -32,7 +33,9 @@ public class DiagramListener extends UniversalListener implements MouseWheelList
 		super.mousePressed(me);
 
 		// If some elements are selected, and the selector key (ctrl or meta) is still hold, don't deselect all elements if the drawpanel was clicked
-		if (!selector.getSelectedElements().isEmpty() && (me.getModifiers() & SystemInfo.META_KEY.getMask()) != 0) {
+		boolean withMetaKey = (me.getModifiers() & SystemInfo.META_KEY.getMask()) != 0;
+		boolean withAltKey = (me.getModifiers() & InputEvent.ALT_MASK) != 0;
+		if (!selector.getSelectedElements().isEmpty() && withMetaKey) {
 			return;
 		}
 
@@ -43,7 +46,7 @@ public class DiagramListener extends UniversalListener implements MouseWheelList
 		}
 		selector.updateSelectorInformation(); // after everything is deselected updateSelectorInformation (to update property panel content)
 
-		if ((me.getModifiers() & SystemInfo.META_KEY.getMask()) != 0) {
+		if (withAltKey) {
 			SelectorFrame selframe = selector.getSelectorFrame();
 			selframe.setLocation(getOffset(me).getX(), getOffset(me).getY());
 			selframe.setSize(1, 1);
@@ -70,16 +73,22 @@ public class DiagramListener extends UniversalListener implements MouseWheelList
 		return new Point(me.getX(), me.getY());
 	}
 
-	@Override
-	public void mouseWheelMoved(MouseWheelEvent e) {
-		// Only if Ctrl is pressed while scrolling, we zoom in and out
-		if ((e.getModifiersEx() & SystemInfo.META_KEY.getMaskDown()) == SystemInfo.META_KEY.getMaskDown()) {
-			int actualZoom = CurrentDiagram.getInstance().getDiagramHandler().getGridSize();
-			// e.getWheelRotation is -1 if scrolling up and +1 if scrolling down therefore we subtract it
-			CurrentDiagram.getInstance().getDiagramHandler().setGridAndZoom(actualZoom - e.getWheelRotation());
-		}
-		else { // otherwise scroll the diagram
-			CurrentDiagram.getInstance().getDiagramHandler().getDrawPanel().scroll(e.getWheelRotation());
-		}
-	}
+    @Override
+    public void mouseWheelMoved(MouseWheelEvent e) {
+		boolean withMetaKey = (e.getModifiers() & SystemInfo.META_KEY.getMask()) != 0;
+		boolean withShiftKey = (e.getModifiers() & InputEvent.SHIFT_MASK) != 0;
+
+        // Only if Ctrl is pressed while scrolling, we zoom in and out
+        if (withMetaKey) {
+            int actualZoom = CurrentDiagram.getInstance().getDiagramHandler().getGridSize();
+            // e.getWheelRotation is -1 if scrolling up and +1 if scrolling down therefore we subtract it
+            CurrentDiagram.getInstance().getDiagramHandler().setGridAndZoom(actualZoom - e.getWheelRotation());
+        } else { // otherwise scroll the diagram
+            if (withShiftKey) {
+                CurrentDiagram.getInstance().getDiagramHandler().getDrawPanel().scroll(0, e.getWheelRotation());
+            } else {
+                CurrentDiagram.getInstance().getDiagramHandler().getDrawPanel().scroll(e.getWheelRotation(), 0);
+            }
+        }
+    }
 }
