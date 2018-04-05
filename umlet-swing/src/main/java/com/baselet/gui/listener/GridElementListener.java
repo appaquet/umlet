@@ -1,6 +1,7 @@
 package com.baselet.gui.listener;
 
 import java.awt.Component;
+import java.awt.event.InputEvent;
 import java.awt.event.MouseEvent;
 import java.util.Arrays;
 import java.util.Collection;
@@ -85,8 +86,7 @@ public class GridElementListener extends UniversalListener {
 
 		if (IS_DRAGGING_DIAGRAM) {
 			dragDiagram();
-		}
-		if (IS_DRAGGING) {
+		} else if (IS_DRAGGING) {
 			dragEntity(me.isShiftDown(), e);
 		}
 	}
@@ -144,6 +144,11 @@ public class GridElementListener extends UniversalListener {
 			}
 		}
 
+		boolean withMetaKey = (me.getModifiers() & SystemInfo.META_KEY.getMask()) != 0;
+		if (withMetaKey) {
+			IS_DRAGGING_DIAGRAM = true;
+		}
+
 		if (me.getButton() == MouseEvent.BUTTON3) {
 			showContextMenu(e, me.getX(), me.getY());
 		}
@@ -163,13 +168,21 @@ public class GridElementListener extends UniversalListener {
 	private void pressedLeftButton(MouseEvent me) {
 		GridElement e = getGridElement(me);
 
+		boolean withMetaKey = (me.getModifiers() & SystemInfo.META_KEY.getMask()) != 0;
+		boolean withAltKey = (me.getModifiers() & InputEvent.ALT_MASK) != 0;
+
+		// don't select items if we are in dragging
+		if (withMetaKey) {
+			return;
+		}
+
 		// Ctrl + Mouseclick initializes the lasso
-		if ((me.getModifiers() & SystemInfo.META_KEY.getMask()) != 0) {
+		if (withAltKey) {
 			initializeLasso();
 		}
 
 		IS_DRAGGING = true;
-		if ((me.getModifiers() & SystemInfo.META_KEY.getMask()) != 0) {
+		if (withAltKey) {
 			if (selector.isSelected(e)) {
 				DESELECT_MULTISEL = true;
 			}
@@ -208,7 +221,9 @@ public class GridElementListener extends UniversalListener {
 
 		GridElement e = getGridElement(me);
 
-		if ((me.getModifiers() & SystemInfo.META_KEY.getMask()) != 0) {
+		boolean withMetaKey = (me.getModifiers() & SystemInfo.META_KEY.getMask()) != 0;
+		boolean withAltKey = (me.getModifiers() & InputEvent.ALT_MASK) != 0;
+		if (withMetaKey || withAltKey) {
 			if (selector.isSelected(e) && DESELECT_MULTISEL) {
 				selector.deselect(e);
 			}
@@ -252,9 +267,8 @@ public class GridElementListener extends UniversalListener {
 	/**
 	 * Dragging entities must be a Macro, because undo should undo the full move (and not only a small part which would
 	 * happen with many short Move actions) and it must consider sticking relations at the dragging-start and later
+	 * @param isShiftKeyDown
 	 * @param mainElement
-	 * @param directions
-	 * @param b
 	 */
 	private void dragEntity(boolean isShiftKeyDown, GridElement mainElement) {
 
@@ -321,7 +335,6 @@ public class GridElementListener extends UniversalListener {
 	 * After the firstDragging is over, the vector of entities which should be dragged doesn't change (nothing starts sticking during dragging)
 	 * @param oldp
 	 * @param elementsToMove
-	 * @param directions
 	 * @return
 	 */
 	private Vector<Command> continueDragging(int diffx, int diffy, Point oldp, List<GridElement> elementsToMove) {
